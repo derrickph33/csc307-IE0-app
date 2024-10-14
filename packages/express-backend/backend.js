@@ -1,12 +1,14 @@
 import express from "express";
+import cors from "cors"
 
 const app = express();
 const port = 8000;
 
+app.use(cors())
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("Hello World of Awesome!");
+  res.send("Hello World this is the Backend!");
 });
 
 app.listen(port, () => {
@@ -59,10 +61,21 @@ const addUser = (user) => {
   return user;
 };
 
+const generateId = () => {
+  const letters = Array(3)
+    .fill(null)
+    .map(() => String.fromCharCode(97 + Math.floor(Math.random() * 26)))
+    .join('');
+  const numbers = Math.floor(100 + Math.random() * 900).toString();
+  return letters + numbers;
+};
+
 app.post("/users", (req, res) => {
   const userToAdd = req.body;
-  addUser(userToAdd);
-  res.send();
+  const id = generateId();
+  const user = { id, ...userToAdd };
+  addUser(user);
+  res.status(201).send(user);
 });
 
 app.get("/users/:id", (req, res) => {
@@ -83,7 +96,7 @@ app.delete("/users/:id", (req, res) => {
     res.status(404).send("User not found.");
   } else {
     const deletedUser = users.users_list.splice(userIndex, 1)[0];
-    res.status(200).send({
+    res.status(204).send({
       message: "User deleted successfully.",
       user: deletedUser,
     });
