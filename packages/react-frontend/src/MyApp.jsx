@@ -8,7 +8,7 @@ import Form from "./Form"
   
     function removeOneCharacter(index) {
         const deletedChar = characters[index];
-        fetch(`http://localhost:8000/users/${deletedChar.id}`, {
+        fetch(`http://localhost:8000/users/${deletedChar._id}`, {
           method: "DELETE"
         })
         .then((response) => {

@@ -1,5 +1,17 @@
 import express from "express";
-import cors from "cors"
+import cors from "cors";
+import userService from "./services/user-service.js";
+import dotenv from "dotenv";
+import mongoose from "mongoose";
+
+dotenv.config();
+
+const { MONGO_CONNECTION_STRING } = process.env;
+
+mongoose.set("debug", true);
+mongoose
+  .connect(MONGO_CONNECTION_STRING)
+  .catch((error) => console.log(error));
 
 const app = express();
 const port = 8000;
@@ -15,52 +27,6 @@ app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
 });
 
-const users = {
-  users_list: [
-    {
-      id: "xyz789",
-      name: "Charlie",
-      job: "Janitor",
-    },
-    {
-      id: "abc123",
-      name: "Mac",
-      job: "Bouncer",
-    },
-    {
-      id: "ppp222",
-      name: "Mac",
-      job: "Professor",
-    },
-    {
-      id: "yat999",
-      name: "Dee",
-      job: "Aspring actress",
-    },
-    {
-      id: "zap555",
-      name: "Dennis",
-      job: "Bartender",
-    },
-  ],
-};
-
-const findUserByName = (name) => {
-  return users["users_list"].filter((user) => user["name"] === name);
-};
-
-const findUserByJob = (job) => {
-  return users["users_list"].filter((user) => user["job"] === job);
-};
-
-const findUserById = (id) =>
-  users["users_list"].find((user) => user["id"] === id);
-
-const addUser = (user) => {
-  users["users_list"].push(user);
-  return user;
-};
-
 const generateId = () => {
   const letters = Array(3)
     .fill(null)
@@ -72,55 +38,52 @@ const generateId = () => {
 
 app.post("/users", (req, res) => {
   const userToAdd = req.body;
-  const id = generateId();
-  const user = { id, ...userToAdd };
-  addUser(user);
-  res.status(201).send(user);
+  userService.addUser(userToAdd)
+    .then((addedUser) => {
+      res.status(201).send(addedUser);
+    })
+    .catch((error) => {
+      res.status(500).send({ message: "Error adding user", error });
+    });
 });
 
 app.get("/users/:id", (req, res) => {
   const id = req.params["id"]; //or req.params.id
-  let result = findUserById(id);
-  if (result === undefined) {
-    res.status(404).send("Resource not found.");
-  } else {
-    res.send(result);
-  }
+  userService.findUserById(id)
+    .then((user) => {
+      if (!user) {
+        res.status(404).send("Resource not found.");
+      } else {
+        res.send(user);
+      }
+    })
+    .catch((error) => {
+      res.status(500).send({ message: "Error retrieving user", error });
+    });
 });
 
 app.delete("/users/:id", (req, res) => {
   const id = req.params.id;
-  const userIndex = users.users_list.findIndex((user) => user.id === id);
-
-  if (userIndex === -1) {
-    res.status(404).send("User not found.");
-  } else {
-    const deletedUser = users.users_list.splice(userIndex, 1)[0];
-    res.status(204).send({
-      message: "User deleted successfully.",
-      user: deletedUser,
+  userService.deleteUserById(id)
+    .then((deletedUser) => {
+      if (!deletedUser) {
+        res.status(404).send("User not found.");
+      } else {
+        res.status(204).send({ message: "User deleted successfully." });
+      }
+    })
+    .catch((error) => {
+      res.status(500).send({ message: "Error deleting user", error });
     });
-  }
 });
-
-const findUserByNameAndJob = (name, job) => {
-  return users["users_list"].filter(
-    (user) => user["name"] === name && user["job"] === job
-  );
-};
 
 app.get("/users", (req, res) => {
   const { name, job } = req.query;
-  if (name && job) {
-    const result = findUserByNameAndJob(name, job);
-    res.send({ users_list: result });
-  } else if (name) {
-    let result = findUserByName(name);
-    res.send({ users_list: result });
-  } else if (job) {
-    let result = findUserByJob(job);
-    res.send({ users_list: result });
-  } else {
-    res.send(users);
-  }
+  userService.getUsers(name, job)
+    .then((users) => {
+      res.send({ users_list: users });
+    })
+    .catch((error) => {
+      res.status(500).send({ message: "Error retrieving users", error });
+    });
 });
